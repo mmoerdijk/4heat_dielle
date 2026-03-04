@@ -50,6 +50,7 @@ SENSOR_TYPES = {
     "30004": ["Ignition", None, "", None, None],
     "2ffff": ["Exhaust temperature", UnitOfTemperature.CELSIUS, "mdi:thermometer", "temperature", "measurement"],
     "30006": ["Room temperature", UnitOfTemperature.CELSIUS, "mdi:thermometer", "temperature", "measurement"],
+    "2fff7": ["Room temperature", UnitOfTemperature.CELSIUS, "mdi:thermometer", "temperature", "measurement"],
     "30007": ["Inputs", None, "", None, None],
     "30008": ["Combustion fan", None, "", None, None], #RPM
     "30009": ["Heating fan", None, "", None, None],
@@ -98,6 +99,7 @@ MODE_NAMES = {
     2: "Ignition",
     3: "Stabilization",
     4: "Ignition",
+    5: "Off/Standby",
     512: "Run",
     1024: "Run",
     1280: "Run",

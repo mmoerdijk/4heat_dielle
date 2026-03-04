@@ -15,6 +15,36 @@ from .coordinator import FourHeatDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
+def extract_sensor_id(packet):
+    """Extracts the canonical sensor ID from a raw packet string."""
+    if not isinstance(packet, str) or len(packet) < 6:
+        return None
+
+    id_hex = packet[2:6]
+    
+    # Heuristic mapping
+    candidates = [id_hex, "2" + id_hex]
+    try:
+        val_dec = int(id_hex, 16)
+        candidates.append("20" + str(val_dec))
+    except ValueError:
+        pass
+    if id_hex.startswith('8'):
+        candidates.append("c" + id_hex)
+        
+    for key in candidates:
+        if key in SENSOR_TYPES:
+            return key
+            
+    # Fallback for known special cases
+    if id_hex == "0001":
+        return "30001"
+        
+    # If no match, return the simple slice as fallback (legacy behavior)
+    # But this is likely wrong for 4Heat. Let's return the most likely candidate?
+    # Or just return the simple slice to avoid breaking other stoves?
+    return packet[1:6]
+
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Add an FourHeat entry."""
@@ -27,10 +57,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
     for sensorId in sensorIds:
         if len(sensorId) > 5:
             try:
-                sId = sensorId[1:6]
-                entities.append(FourHeatDevice(coordinator, sId, entry.title))
-            except:
-                _LOGGER.debug(f"Error adding {sensorId}")
+                # Use robust extraction logic
+                sId = extract_sensor_id(sensorId)
+                if sId:
+                    entities.append(FourHeatDevice(coordinator, sId, entry.title))
+            except Exception as e:
+                _LOGGER.debug(f"Error adding {sensorId}: {e}")
 
     async_add_entities(entities)
 

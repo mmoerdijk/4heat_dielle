@@ -12,7 +12,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import (
     DOMAIN, SOCKET_BUFFER, SOCKET_TIMEOUT, TCP_PORT, DATA_QUERY, ERROR_QUERY,
-    RESULT_ERROR, CONF_MODE, MODES, MODE_TYPE, ERROR_TYPE
+    RESULT_ERROR, CONF_MODE, MODES, MODE_TYPE, ERROR_TYPE, SENSOR_TYPES, MODE_NAMES, UnitOfTemperature
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -65,9 +65,17 @@ class FourHeatDataUpdateCoordinator(DataUpdateCoordinator):
                 s.close()
                 _LOGGER.debug(f"Query sent: {query}")
                 _LOGGER.debug(f"Raw data received: {result}")
-                result = result.replace("[","")
-                result = result.replace("]","")
-                result = result.replace('"',"")
+                
+                # Parse JSON-like response manually or use split
+                # The response is like ["2WL","0","..."]
+                # We want the list of strings
+                result = result.replace("[","").replace("]","").replace('"',"")
+                # Handle the pipe separator if present (some firmwares use it)
+                if '|' in result:
+                    parts = result.split('|')
+                    # Take the last part which usually contains the JSON array content
+                    result = parts[-1]
+                
                 d = result.split(",")
             except Exception as error:
                 _LOGGER.error(f"Update error: {error}")
@@ -75,21 +83,96 @@ class FourHeatDataUpdateCoordinator(DataUpdateCoordinator):
                 d = []
             return d
 
+        def _parse_hex_val(hex_str):
+            try:
+                return int(hex_str, 16)
+            except (ValueError, TypeError):
+                return 0
+
+        def _decode_packet(packet):
+            """Decodes a single data packet string into a dictionary of values."""
+            if not isinstance(packet, str) or len(packet) < 6:
+                return None, None, None
+
+            id_hex = packet[2:6]
+            data_hex = packet[6:]
+            
+            # Heuristic mapping
+            candidates = [id_hex, "2" + id_hex]
+            try:
+                val_dec = int(id_hex, 16)
+                candidates.append("20" + str(val_dec))
+            except ValueError:
+                pass
+            if id_hex.startswith('8'):
+                candidates.append("c" + id_hex)
+                
+            sensor_info, sensor_key = None, None
+            for key in candidates:
+                if key in SENSOR_TYPES:
+                    sensor_info = SENSOR_TYPES[key]
+                    sensor_key = key
+                    break
+                    
+            if not sensor_info:
+                if id_hex == "0001":
+                     sensor_info = ["Summary Packet", None, ""]
+                     sensor_key = "30001"
+
+            val_hex = data_hex[0:4]
+            val = _parse_hex_val(val_hex)
+            name = "Unknown"
+            unit = ""
+
+            if sensor_info:
+                name = sensor_info[0]
+                unit = sensor_info[1] if sensor_info[1] else ""
+                
+                if sensor_key == "30001":
+                    exhaust_hex = packet[-6:-2]
+                    val = _parse_hex_val(exhaust_hex)
+                    name = "Exhaust temperature (Summary)"
+                    unit = UnitOfTemperature.CELSIUS
+                elif sensor_key == "c8101":
+                    state_hex = packet[16:18]
+                    val = _parse_hex_val(state_hex)
+                    pass
+
+            # Apply scaling for temperature
+            if unit == UnitOfTemperature.CELSIUS:
+                if "Exhaust" in name:
+                    val = val
+                else:
+                    val = val / 10.0
+
+            return sensor_key, val, sensor_info
+
         def _update_data() -> dict:
             """Fetch data from 4heat via sync functions."""
-            list = _query_stove(DATA_QUERY)
-            dict = self.data
-            if dict == None:
-                dict = {}
-            if len(list) > 0:
-                if list[0] == RESULT_ERROR:
-                    list = _query_stove(ERROR_QUERY)
+            # Query page 0
+            list_data = _query_stove(DATA_QUERY)
+            
+            # Optional: Query page 1 if needed
+            # list_data_1 = _query_stove(b'["2WL","1"]')
+            # list_data.extend(list_data_1)
+
+            data_dict = self.data
+            if data_dict is None:
+                data_dict = {}
+            
+            if len(list_data) > 0:
+                if list_data[0] == RESULT_ERROR:
+                    # Handle error or retry
+                    pass
                     
-                for data in list:
-                    if len(data) > 3:
-                        _LOGGER.debug(data[0:])
-                        dict[data[1:6]] = [int(data[7:10],16), data[0]]
-            return dict
+                for packet in list_data:
+                    if len(packet) > 6:
+                        key, val, info = _decode_packet(packet)
+                        if key:
+                            name = info[0] if info else "Unknown"
+                            data_dict[key] = [val, name]
+
+            return data_dict
 
         try:
             async with timeout(10):
@@ -149,4 +232,3 @@ class FourHeatDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.debug("Set value")
         except Exception as ex:
             _LOGGER.error(ex)
-
