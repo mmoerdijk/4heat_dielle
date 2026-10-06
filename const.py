@@ -45,6 +45,7 @@ POWER_TYPE = "20364"
 # Fuel mode word in the Dielle summary packet (packet id 0000)
 FUEL_MODE_TYPE = "30000"
 FAN_TYPE = "20575"
+CANALISATION_TYPE = "20638"
 
 SENSOR_TYPES = {
     "c8101": ["State", None, "", None, None],
@@ -87,6 +88,7 @@ SENSOR_TYPES = {
     "20385": ["UN 20385", None, "", None, None],
     "20375": ["UN 20375", None, "", None, None],
     "20575": ["Fan mode", None, "mdi:fan", None, None],
+    "20638": ["Canalisation", None, "mdi:fan", None, None],
     "20493": ["Room temperature set point", UnitOfTemperature.CELSIUS, "mdi:thermometer", "temperature", "measurement"],
     "20570": ["UN 20570", None, "", None, None],
     "20801": ["Heating power", None, "", None, None],
@@ -157,8 +159,10 @@ FUEL_MODE_NAMES = {
     0x0108: "Pellet",
 }
 
-# Fan setting: the value is the fan level, 6 = Auto (verified for 2 and Auto)
+# Fan and canalisation settings: 0 = Off, 1-5 = level, 6 = Auto
+# (verified on the fan for Off, 2 and Auto, and on canalisation for 1)
 FAN_NAMES = {
+    0: "Off",
     1: "1",
     2: "2",
     3: "3",

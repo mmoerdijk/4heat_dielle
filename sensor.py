@@ -7,7 +7,7 @@ from homeassistant.components.sensor import SensorEntity
 
 from .const import (
     MODE_NAMES, ERROR_NAMES, POWER_NAMES, FUEL_MODE_NAMES, FAN_NAMES,
-    MODE_TYPE, ERROR_TYPE, POWER_TYPE, FUEL_MODE_TYPE, FAN_TYPE,
+    MODE_TYPE, ERROR_TYPE, POWER_TYPE, FUEL_MODE_TYPE, FAN_TYPE, CANALISATION_TYPE,
     SENSOR_TYPES, DOMAIN, DATA_COORDINATOR,
     ATTR_MARKER, ATTR_NUM_VAL, ATTR_READING_ID, ATTR_STOVE_ID
 )
@@ -79,7 +79,7 @@ class FourHeatDevice(CoordinatorEntity, SensorEntity):
             elif self.type == FUEL_MODE_TYPE:
                 val = self.coordinator.data[self.type][0]
                 state = FUEL_MODE_NAMES.get(val, f"0x{val:04x}")
-            elif self.type == FAN_TYPE:
+            elif self.type in (FAN_TYPE, CANALISATION_TYPE):
                 val = self.coordinator.data[self.type][0]
                 state = FAN_NAMES.get(val, str(val))
             else:
@@ -164,7 +164,9 @@ class FourHeatDevice(CoordinatorEntity, SensorEntity):
             }
 
             # include numeric raw value for modes/errors/power as an attribute too
-            if self.type in (MODE_TYPE, ERROR_TYPE, POWER_TYPE, FUEL_MODE_TYPE, FAN_TYPE):
+            if self.type in (
+                MODE_TYPE, ERROR_TYPE, POWER_TYPE, FUEL_MODE_TYPE, FAN_TYPE, CANALISATION_TYPE
+            ):
                 attrs[ATTR_NUM_VAL] = self.coordinator.data[self.type][0]
 
             return attrs
