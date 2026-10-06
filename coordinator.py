@@ -18,6 +18,39 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
+def extract_sensor_id(packet):
+    """Extracts the canonical sensor ID from a raw packet string.
+
+    Used both when creating sensor entities and when decoding updates, so an
+    entity's key always matches the key its data is stored under.
+    """
+    if not isinstance(packet, str) or len(packet) < 6:
+        return None
+
+    id_hex = packet[2:6]
+
+    # Heuristic mapping
+    candidates = [id_hex, "2" + id_hex]
+    try:
+        val_dec = int(id_hex, 16)
+        candidates.append("20" + str(val_dec))
+    except ValueError:
+        pass
+    if id_hex.startswith('8'):
+        candidates.append("c" + id_hex)
+
+    for key in candidates:
+        if key in SENSOR_TYPES:
+            return key
+
+    # Fallback for known special cases
+    if id_hex == "0001":
+        return "30001"
+
+    # Unknown sensor: fall back to the simple slice (legacy behavior)
+    return packet[1:6]
+
+
 class FourHeatDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching 4heat data."""
 
@@ -94,30 +127,13 @@ class FourHeatDataUpdateCoordinator(DataUpdateCoordinator):
             if not isinstance(packet, str) or len(packet) < 6:
                 return None, None, None
 
-            id_hex = packet[2:6]
             data_hex = packet[6:]
-            
-            # Heuristic mapping
-            candidates = [id_hex, "2" + id_hex]
-            try:
-                val_dec = int(id_hex, 16)
-                candidates.append("20" + str(val_dec))
-            except ValueError:
-                pass
-            if id_hex.startswith('8'):
-                candidates.append("c" + id_hex)
-                
-            sensor_info, sensor_key = None, None
-            for key in candidates:
-                if key in SENSOR_TYPES:
-                    sensor_info = SENSOR_TYPES[key]
-                    sensor_key = key
-                    break
-                    
-            if not sensor_info:
-                if id_hex == "0001":
-                     sensor_info = ["Summary Packet", None, ""]
-                     sensor_key = "30001"
+
+            # Unknown sensors keep their fallback key and raw value
+            sensor_key = extract_sensor_id(packet)
+            sensor_info = SENSOR_TYPES.get(sensor_key)
+            if not sensor_info and sensor_key == "30001":
+                sensor_info = ["Summary Packet", None, ""]
 
             val_hex = data_hex[0:4]
             val = _parse_hex_val(val_hex)
