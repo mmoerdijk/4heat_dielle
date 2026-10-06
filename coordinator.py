@@ -12,7 +12,8 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import (
     DOMAIN, SOCKET_BUFFER, SOCKET_TIMEOUT, TCP_PORT, DATA_QUERY, ERROR_QUERY,
-    RESULT_ERROR, CONF_MODE, MODES, MODE_TYPE, ERROR_TYPE, SENSOR_TYPES, MODE_NAMES, UnitOfTemperature
+    RESULT_ERROR, CONF_MODE, MODES, MODE_TYPE, ERROR_TYPE, SENSOR_TYPES, MODE_NAMES, UnitOfTemperature,
+    FUEL_MODE_TYPE
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -46,6 +47,8 @@ def extract_sensor_id(packet):
     # Fallback for known special cases
     if id_hex == "0001":
         return "30001"
+    if id_hex == "0000":
+        return FUEL_MODE_TYPE
 
     # Unknown sensor: fall back to the simple slice (legacy behavior)
     return packet[1:6]
@@ -149,6 +152,8 @@ class FourHeatDataUpdateCoordinator(DataUpdateCoordinator):
                     val = _parse_hex_val(exhaust_hex)
                     name = "Exhaust temperature (Summary)"
                     unit = UnitOfTemperature.CELSIUS
+                elif sensor_key == FUEL_MODE_TYPE:
+                    val = _parse_hex_val(packet.strip()[-6:-2])
                 elif sensor_key == "c8101":
                     state_hex = packet[16:18]
                     val = _parse_hex_val(state_hex)

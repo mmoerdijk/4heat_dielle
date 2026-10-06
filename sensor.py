@@ -6,8 +6,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components.sensor import SensorEntity
 
 from .const import (
-    MODE_NAMES, ERROR_NAMES, POWER_NAMES,
-    MODE_TYPE, ERROR_TYPE, POWER_TYPE,
+    MODE_NAMES, ERROR_NAMES, POWER_NAMES, FUEL_MODE_NAMES,
+    MODE_TYPE, ERROR_TYPE, POWER_TYPE, FUEL_MODE_TYPE,
     SENSOR_TYPES, DOMAIN, DATA_COORDINATOR,
     ATTR_MARKER, ATTR_NUM_VAL, ATTR_READING_ID, ATTR_STOVE_ID
 )
@@ -76,6 +76,9 @@ class FourHeatDevice(CoordinatorEntity, SensorEntity):
                 state = ERROR_NAMES[self.coordinator.data[self.type][0]]
             elif self.type == POWER_TYPE:
                 state = POWER_NAMES[self.coordinator.data[self.type][0]]
+            elif self.type == FUEL_MODE_TYPE:
+                val = self.coordinator.data[self.type][0]
+                state = FUEL_MODE_NAMES.get(val, f"0x{val:04x}")
             else:
                 state = self.coordinator.data[self.type][0]
 
@@ -158,7 +161,7 @@ class FourHeatDevice(CoordinatorEntity, SensorEntity):
             }
 
             # include numeric raw value for modes/errors/power as an attribute too
-            if self.type in (MODE_TYPE, ERROR_TYPE, POWER_TYPE):
+            if self.type in (MODE_TYPE, ERROR_TYPE, POWER_TYPE, FUEL_MODE_TYPE):
                 attrs[ATTR_NUM_VAL] = self.coordinator.data[self.type][0]
 
             return attrs

@@ -42,9 +42,12 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=20)
 MODE_TYPE = "c8101"
 ERROR_TYPE = "30002"
 POWER_TYPE = "20364"
+# Fuel mode word in the Dielle summary packet (packet id 0000)
+FUEL_MODE_TYPE = "30000"
 
 SENSOR_TYPES = {
     "c8101": ["State", None, "", None, None],
+    "30000": ["Mode", None, "mdi:fire", None, None],
     "30002": ["Error", None, "", None, None],
     "30003": ["Timer", None, "", None, None],
     "30004": ["Ignition", None, "", None, None],
@@ -144,4 +147,11 @@ POWER_NAMES = {
     5: "P5",
     6: "P6",
     7: "Auto",
+}
+
+# High byte: 02 = wood, 01 = pellet; bit 0x80 = combi (automatic pellet takeover)
+FUEL_MODE_NAMES = {
+    0x0288: "Combi",
+    0x0208: "Wood",
+    0x0108: "Pellet",
 }
