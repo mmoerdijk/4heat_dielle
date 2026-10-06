@@ -205,41 +205,36 @@ class FourHeatDataUpdateCoordinator(DataUpdateCoordinator):
         except Exception as error:
             raise UpdateFailed(f"Invalid response from API: {error}") from error
 
-    async def async_turn_on(self) -> bool:
+    async def _async_send_command(self, command: bytes, description: str) -> bool:
+        """Send a command to the stove off the event loop and check the reply."""
+        def _send() -> str:
+            with socket.create_connection((self._host, TCP_PORT), timeout=SOCKET_TIMEOUT) as s:
+                s.sendall(command)
+                return s.recv(SOCKET_BUFFER).decode()
+
+        _LOGGER.debug(f"Command to send ({description}): {command}")
         try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(SOCKET_TIMEOUT)
-            s.connect((self._host, TCP_PORT))
-            s.send(self._on_cmd)
-            s.recv(SOCKET_BUFFER).decode()
-            s.close()
-            _LOGGER.debug("Toggle ON")
-        except Exception as ex:
-            _LOGGER.error(ex)
+            reply = await self.hass.async_add_executor_job(_send)
+        except OSError as ex:
+            _LOGGER.error(f"Failed to send {description}: {ex}")
+            return False
+        if reply.startswith('["ERR"'):
+            _LOGGER.error(f"Stove rejected {description}: {reply}")
+            return False
+        _LOGGER.debug(f"Sent {description}, reply: {reply}")
+        return True
+
+    async def async_turn_on(self) -> bool:
+        return await self._async_send_command(self._on_cmd, "turn on")
 
     async def async_turn_off(self) -> bool:
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(SOCKET_TIMEOUT)
-            s.connect((self._host, TCP_PORT))
-            s.send(self._off_cmd)
-            s.recv(SOCKET_BUFFER).decode()
-            s.close()
-            _LOGGER.debug("Toggle OFF")
-        except Exception as ex:
-            _LOGGER.error(ex)
+        return await self._async_send_command(self._off_cmd, "turn off")
 
     async def async_unblock(self) -> bool:
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(SOCKET_TIMEOUT)
-            s.connect((self._host, TCP_PORT))
-            s.send(self._unblock_cmd)
-            s.recv(SOCKET_BUFFER).decode()
-            s.close()
-            _LOGGER.debug("Toggle Unblock")
-        except Exception as ex:
-            _LOGGER.error(ex)
+        if self._unblock_cmd is None:
+            _LOGGER.error("Unblock is not supported in legacy command mode")
+            return False
+        return await self._async_send_command(self._unblock_cmd, "unblock")
 
 
     async def async_set_value(self, id, value) -> bool:
@@ -266,20 +261,4 @@ class FourHeatDataUpdateCoordinator(DataUpdateCoordinator):
         """
         param = f"{int(setting_type[2:]):04x}"
         command = f'["2WC","1","050e{param}{int(value):04x}"]\n'.encode()
-
-        def _send() -> str:
-            with socket.create_connection((self._host, TCP_PORT), timeout=SOCKET_TIMEOUT) as s:
-                s.sendall(command)
-                return s.recv(SOCKET_BUFFER).decode()
-
-        _LOGGER.debug(f"Command to send: {command}")
-        try:
-            reply = await self.hass.async_add_executor_job(_send)
-        except OSError as ex:
-            _LOGGER.error(f"Failed to set {setting_type} to {value}: {ex}")
-            return False
-        if reply.startswith('["ERR"'):
-            _LOGGER.error(f"Stove rejected setting {setting_type} to {value}: {reply}")
-            return False
-        _LOGGER.debug(f"Set {setting_type} to {value}, reply: {reply}")
-        return True
+        return await self._async_send_command(command, f"setting {setting_type} to {value}")

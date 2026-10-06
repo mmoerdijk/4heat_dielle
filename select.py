@@ -12,8 +12,8 @@ from .coordinator import FourHeatDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-# Writable settings with their value -> option tables. The power setting
-# packet reports a 1-6 range, so P6 is the highest option.
+# Writable settings with their value -> option tables. Power takes 1-5
+# manually and 6 = Auto.
 SELECT_OPTIONS = {
     POWER_TYPE: {v: POWER_NAMES[v] for v in range(1, 7)},
     FAN_TYPE: FAN_NAMES,

@@ -54,7 +54,7 @@ class FourHeatSwitch(CoordinatorEntity, SwitchEntity):
         if self.type not in self.coordinator.data: 
             return False
         if self.type == MODE_TYPE:
-            return self.coordinator.data[self.type][0] not in [0,256,7,8,9]
+            return self.coordinator.data[self.type][0] not in [0,256,5,7,8,9]
         elif self.type == ERROR_TYPE:
             return self.coordinator.data[self.type][0] != 0
 

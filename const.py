@@ -16,9 +16,10 @@ ATTR_NUM_VAL = "num_val"
 
 DATA_QUERY = b'["2WL","0"]'
 ERROR_QUERY = b'["SEC","3","I30001000000000000","I30002000000000000","I30017000000000000"]'
-UNBLOCK_CMD = b'["2WC","1","05050000"]' # Unblock (same command used as for OFF_CMD)
-OFF_CMD = b'["2WC","1","05050000"]' # OFF
-ON_CMD = b'["2WC","1","05040000"]' # ON
+# The Dielle module needs the trailing newline on 2WC commands
+UNBLOCK_CMD = b'["2WC","1","05050000"]\n' # Unblock (same command used as for OFF_CMD)
+OFF_CMD = b'["2WC","1","05050000"]\n' # OFF
+ON_CMD = b'["2WC","1","05040000"]\n' # ON
 
 OFF_CMD_OLD = b'["2WL","0"]' # OFF
 ON_CMD_OLD = b'["2WC","1","05040000"]' # ON
@@ -148,8 +149,7 @@ POWER_NAMES = {
     3: "P3",
     4: "P4",
     5: "P5",
-    6: "P6",
-    7: "Auto",
+    6: "Auto",  # Dielle: 1-5 manual, 6 = Auto
 }
 
 # High byte: 02 = wood, 01 = pellet; bit 0x80 = combi (automatic pellet takeover)
