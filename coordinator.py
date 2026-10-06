@@ -28,6 +28,11 @@ def extract_sensor_id(packet):
     if not isinstance(packet, str) or len(packet) < 6:
         return None
 
+    # The summary packet is the only packet of type 10. Its bytes 2-6 are data
+    # (seen as 0000 and 0001), so they cannot be used as its id.
+    if packet.startswith("10"):
+        return FUEL_MODE_TYPE
+
     id_hex = packet[2:6]
 
     # Heuristic mapping
@@ -47,8 +52,6 @@ def extract_sensor_id(packet):
     # Fallback for known special cases
     if id_hex == "0001":
         return "30001"
-    if id_hex == "0000":
-        return FUEL_MODE_TYPE
 
     # Unknown sensor: fall back to the simple slice (legacy behavior)
     return packet[1:6]
