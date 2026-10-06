@@ -94,6 +94,9 @@ class FourHeatSwitch(CoordinatorEntity, SwitchEntity):
 
     @property
     def state_attributes(self):
+        # The error code is only in the data while the stove reports an error
+        if self.type not in self.coordinator.data:
+            return None
         try:
             if self.type == MODE_TYPE:
                 val = self.coordinator.data[self.type][0]
