@@ -6,7 +6,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components.sensor import SensorEntity
 
 from .const import (
-    MODE_NAMES, ERROR_NAMES, POWER_NAMES, FUEL_MODE_NAMES, FAN_NAMES,
+    MODE_NAMES, ERROR_NAMES, POWER_NAMES, FUEL_NAMES, COMBI_FLAG, FAN_NAMES,
     MODE_TYPE, ERROR_TYPE, POWER_TYPE, FUEL_MODE_TYPE, FAN_TYPE, CANALISATION_TYPE,
     SENSOR_TYPES, DOMAIN, DATA_COORDINATOR,
     ATTR_MARKER, ATTR_NUM_VAL, ATTR_READING_ID, ATTR_STOVE_ID
@@ -14,6 +14,13 @@ from .const import (
 from .coordinator import FourHeatDataUpdateCoordinator, extract_sensor_id
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def fuel_mode_name(word):
+    """Return the configured mode (Combi, Wood or Pellet) from the mode word."""
+    if word & COMBI_FLAG:
+        return "Combi"
+    return FUEL_NAMES.get(word >> 8, f"0x{word:04x}")
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -71,14 +78,14 @@ class FourHeatDevice(CoordinatorEntity, SensorEntity):
             return None
         try:
             if self.type == MODE_TYPE:
-                state = MODE_NAMES[self.coordinator.data[self.type][0]]
+                val = self.coordinator.data[self.type][0]
+                state = MODE_NAMES.get(val, str(val))
             elif self.type == ERROR_TYPE:
                 state = ERROR_NAMES[self.coordinator.data[self.type][0]]
             elif self.type == POWER_TYPE:
                 state = POWER_NAMES[self.coordinator.data[self.type][0]]
             elif self.type == FUEL_MODE_TYPE:
-                val = self.coordinator.data[self.type][0]
-                state = FUEL_MODE_NAMES.get(val, f"0x{val:04x}")
+                state = fuel_mode_name(self.coordinator.data[self.type][0])
             elif self.type in (FAN_TYPE, CANALISATION_TYPE):
                 val = self.coordinator.data[self.type][0]
                 state = FAN_NAMES.get(val, str(val))
@@ -168,6 +175,10 @@ class FourHeatDevice(CoordinatorEntity, SensorEntity):
                 MODE_TYPE, ERROR_TYPE, POWER_TYPE, FUEL_MODE_TYPE, FAN_TYPE, CANALISATION_TYPE
             ):
                 attrs[ATTR_NUM_VAL] = self.coordinator.data[self.type][0]
+
+            if self.type == FUEL_MODE_TYPE:
+                word = self.coordinator.data[self.type][0]
+                attrs["active_fuel"] = FUEL_NAMES.get(word >> 8, f"0x{word >> 8:02x}")
 
             return attrs
 

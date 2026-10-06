@@ -157,10 +157,6 @@ class FourHeatDataUpdateCoordinator(DataUpdateCoordinator):
                     unit = UnitOfTemperature.CELSIUS
                 elif sensor_key == FUEL_MODE_TYPE:
                     val = _parse_hex_val(packet.strip()[-6:-2])
-                elif sensor_key == "c8101":
-                    state_hex = packet[16:18]
-                    val = _parse_hex_val(state_hex)
-                    pass
 
             # Apply scaling for temperature
             if unit == UnitOfTemperature.CELSIUS:
@@ -192,9 +188,13 @@ class FourHeatDataUpdateCoordinator(DataUpdateCoordinator):
                 for packet in list_data:
                     if len(packet) > 6:
                         key, val, info = _decode_packet(packet)
-                        if key:
+                        # The c8101 packet does not change when the stove starts
+                        # or stops; the state comes from the summary packet below
+                        if key and key != MODE_TYPE:
                             name = info[0] if info else "Unknown"
                             data_dict[key] = [val, name]
+                        if key == FUEL_MODE_TYPE:
+                            data_dict[MODE_TYPE] = [_parse_hex_val(packet[10:12]), "State"]
 
             return data_dict
 

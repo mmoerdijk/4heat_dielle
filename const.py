@@ -100,26 +100,27 @@ SENSOR_TYPES = {
     "50001": ["Auger on", None, "", None, None],
 }
 
+# Stove status from the summary packet (characters 10-11), Dielle status table
+# from the SmartHeat project
 MODE_NAMES = {
-    256: "Ignition",
-    1: "Check Up",
-    2: "Ignition",
-    3: "Stabilization",
-    4: "Ignition",
-    5: "Off/Standby",
-    512: "Run",
-    1024: "Run",
-    1280: "Run",
+    0: "Off",
+    1: "Ignition phase 1",
+    2: "Ignition phase 2",
+    3: "Ignition phase 3",
+    4: "Stabilization",
+    5: "Heating",
     6: "Modulation",
     7: "Extinguishing",
     8: "Safety",
-    0: "Off",
-    10: "RecoverIgnition",
+    9: "Blocked",
+    10: "Waiting",
     11: "Standby",
-    48: "Ignition",
-    51: "Ignition",
-    52: "Ignition",
+    12: "Ash cleaning",
+    13: "Wood burning",
 }
+
+# Statuses in which the stove is burning (the state switch shows on)
+RUNNING_STATES = (1, 2, 3, 4, 5, 6, 13)
 
 ERROR_NAMES = {
     0: "No",
@@ -152,12 +153,13 @@ POWER_NAMES = {
     6: "Auto",  # Dielle: 1-5 manual, 6 = Auto
 }
 
-# High byte: 02 = wood, 01 = pellet; bit 0x80 = combi (automatic pellet takeover)
-FUEL_MODE_NAMES = {
-    0x0288: "Combi",
-    0x0208: "Wood",
-    0x0108: "Pellet",
+# Mode word in the summary packet: the high byte is the fuel in use
+# (01 = pellet, 02 = wood) and bit 0x80 is set in combi mode
+FUEL_NAMES = {
+    1: "Pellet",
+    2: "Wood",
 }
+COMBI_FLAG = 0x80
 
 # Fan and canalisation settings: 0 = Off, 1-5 = level, 6 = Auto
 # (verified on the fan for Off, 2 and Auto, and on canalisation for Off and 1)

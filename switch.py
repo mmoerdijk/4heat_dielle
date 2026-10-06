@@ -5,7 +5,7 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
-    MODE_NAMES, SENSOR_TYPES, DOMAIN, DATA_COORDINATOR, MODE_TYPE, ERROR_TYPE
+    MODE_NAMES, SENSOR_TYPES, DOMAIN, DATA_COORDINATOR, MODE_TYPE, ERROR_TYPE, RUNNING_STATES
 )
 from .coordinator import FourHeatDataUpdateCoordinator
 
@@ -54,7 +54,7 @@ class FourHeatSwitch(CoordinatorEntity, SwitchEntity):
         if self.type not in self.coordinator.data: 
             return False
         if self.type == MODE_TYPE:
-            return self.coordinator.data[self.type][0] not in [0,256,5,7,8,9]
+            return self.coordinator.data[self.type][0] in RUNNING_STATES
         elif self.type == ERROR_TYPE:
             return self.coordinator.data[self.type][0] != 0
 
