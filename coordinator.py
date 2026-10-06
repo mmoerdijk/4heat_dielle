@@ -256,3 +256,30 @@ class FourHeatDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.debug("Set value")
         except Exception as ex:
             _LOGGER.error(ex)
+
+    async def async_set_setting(self, setting_type, value) -> bool:
+        """Write a setting with the Dielle 2WC command.
+
+        The Dielle module rejects the SEC layer used by async_set_value. Settings
+        are written as 050e + parameter (4 hex) + value (4 hex), where the
+        parameter is the id from the setting's 0e status packet (20364 -> 016c).
+        """
+        param = f"{int(setting_type[2:]):04x}"
+        command = f'["2WC","1","050e{param}{int(value):04x}"]\n'.encode()
+
+        def _send() -> str:
+            with socket.create_connection((self._host, TCP_PORT), timeout=SOCKET_TIMEOUT) as s:
+                s.sendall(command)
+                return s.recv(SOCKET_BUFFER).decode()
+
+        _LOGGER.debug(f"Command to send: {command}")
+        try:
+            reply = await self.hass.async_add_executor_job(_send)
+        except OSError as ex:
+            _LOGGER.error(f"Failed to set {setting_type} to {value}: {ex}")
+            return False
+        if reply.startswith('["ERR"'):
+            _LOGGER.error(f"Stove rejected setting {setting_type} to {value}: {reply}")
+            return False
+        _LOGGER.debug(f"Set {setting_type} to {value}, reply: {reply}")
+        return True
