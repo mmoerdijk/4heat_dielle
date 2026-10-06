@@ -160,7 +160,7 @@ FUEL_MODE_NAMES = {
 }
 
 # Fan and canalisation settings: 0 = Off, 1-5 = level, 6 = Auto
-# (verified on the fan for Off, 2 and Auto, and on canalisation for 1)
+# (verified on the fan for Off, 2 and Auto, and on canalisation for Off and 1)
 FAN_NAMES = {
     0: "Off",
     1: "1",
